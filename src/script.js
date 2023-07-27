@@ -23,16 +23,50 @@ const inputDuration = document.querySelector(".form__input--duration");
 const inputCadence = document.querySelector(".form__input--cadence");
 const inputElevation = document.querySelector(".form__input--elevation");
 
+class Workout {
+  date = new Date();
+  id = (Date.now() + " ").slice(-10);
+  constructor(coords, distance, duration) {
+    this.coords = coords;
+    this.distance = distance;
+    this.duration = duration;
+  }
+}
+
+class Running extends Workout {
+  constructor(coords, distance, duration, cadence) {
+    super(coords, distance, duration);
+    this.cadence = cadence;
+    this.calcPace();
+  }
+  calcPace() {
+    this.pace = this.duration / this.distance;
+    return this.pace;
+  }
+}
+
+class Cycling extends Workout {
+  constructor(coords, distance, duration, elevation) {
+    super(coords, distance, duration);
+    this.elevation = elevation;
+    this.calcSpeed();
+  }
+  calcSpeed() {
+    this.speed = this.distance / (this.duration / 60);
+    return this.speed;
+  }
+}
+
 class App {
   _map;
   _mapEvent;
+  _workouts = [];
   constructor() {
     this._getPosition();
 
     form.addEventListener("submit", this._newWorkout.bind(this));
 
     inputType.addEventListener("change", this._toogleField);
-    
   }
 
   _getPosition() {
@@ -77,13 +111,53 @@ class App {
 
   _newWorkout(e) {
     e.preventDefault();
+
+    const validInputs = (...inputs) =>
+      inputs.every((inp) => Number.isFinite(inp));
+
+    const allPositive = (...inputs) => inputs.every((inp) => inp > 0);
+
+    const type = inputType.value;
+    const distance = +inputDistance.value;
+    const duration = +inputDuration.value;
+    const { lat, lng } = this._mapEvent.latlng;
+
+    let workout;
+
+    if (type === "running") {
+      const cadence = +inputCadence.value;
+      if (
+        !validInputs(distance, duration, cadence) ||
+        !allPositive(distance, duration, cadence)
+      ) {
+        return alert("You must write prime positive number!");
+      }
+      workout = new Running([lat, lng], distance, duration, cadence);
+    }
+    if (type === "cycling") {
+      const elevation = +inputElevation.value;
+      if (
+        !validInputs(distance, duration, elevation) ||
+        !allPositive(distance, duration)
+      ) {
+        return alert("You must write prime positive number!");
+      }
+      workout = new Cycling([lat, lng], distance, duration, elevation);
+    }
+    this._workouts.push(workout);
+
+    console.log(this._workouts);
+
     inputElevation.value =
       inputDistance.value =
       inputCadence.value =
       inputDuration.value =
         "";
-    const { lat, lng } = this._mapEvent.latlng;
-    L.marker([lat, lng])
+
+    this.renderWorkMarker(workout);
+  }
+  renderWorkMarker(workout) {
+    L.marker(workout.coords)
       .addTo(this._map)
       .bindPopup(
         L.popup({
@@ -93,7 +167,7 @@ class App {
         })
       )
       .openPopup()
-      .setPopupContent("workout");
+      .setPopupContent(`${workout.distance + " "}`);
   }
 }
 
