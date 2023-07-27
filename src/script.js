@@ -87,6 +87,8 @@ class App {
   constructor() {
     this._getPosition();
 
+    this._getLocaleStorage();
+
     form.addEventListener("submit", this._newWorkout.bind(this));
 
     inputType.addEventListener("change", this._toogleField);
@@ -117,10 +119,21 @@ class App {
 
     L.marker(userCoord)
       .addTo(this._map)
-      .bindPopup("A pretty CSS3 popup.<br> Easily customizable.")
-      .openPopup();
+      .bindPopup(
+        L.popup({
+          autoClose: false,
+          className: "mark-popup",
+          closeOnClick: false,
+        })
+      )
+      .openPopup()
+      .setPopupContent("Your Current Location");
 
     this._map.on("click", this._showForm.bind(this));
+    this._workouts.forEach((item) => {
+      this._renderWorkout(item);
+      this._renderWorkMarker(item);
+    });
   }
 
   _showForm(mapEv) {
@@ -174,6 +187,7 @@ class App {
     this._renderWorkMarker(workout);
     this._renderWorkout(workout);
     this._hideForm();
+    this._setLocalStorage(workout);
   }
   _renderWorkMarker(workout) {
     L.marker(workout.coords)
@@ -260,7 +274,21 @@ class App {
     }
     form.insertAdjacentHTML("afterend", html);
   }
+  _setLocalStorage(workout) {
+    localStorage.setItem("workouts", JSON.stringify(this._workouts));
+  }
+  _getLocaleStorage() {
+    const data = JSON.parse(localStorage.getItem("workouts"));
+    if (!data) return;
+    this._workouts = data;
+    this._workouts.forEach((item) => {
+      this._renderWorkout(item);
+    });
+  }
+  reset() {
+    localStorage.removeItem("workouts");
+    location.reload();
+  }
 }
 
 const app = new App();
-app._getPosition;
